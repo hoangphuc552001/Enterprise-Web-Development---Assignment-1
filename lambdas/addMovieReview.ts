@@ -1,6 +1,6 @@
-import { Handler } from "aws-lambda";
+import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 
-export const handler: Handler = async (event: any) => {
+export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     try {
         console.log("Event: ", JSON.stringify(event));
 
@@ -8,9 +8,6 @@ export const handler: Handler = async (event: any) => {
 
         return {
             statusCode: 201,
-            headers: {
-                "content-type": "application/json",
-            },
             body: JSON.stringify({
                 message: "Fake movie review created.",
                 review: {
@@ -26,9 +23,6 @@ export const handler: Handler = async (event: any) => {
         console.log(JSON.stringify(error));
         return {
             statusCode: 500,
-            headers: {
-                "content-type": "application/json",
-            },
             body: JSON.stringify({ error }),
         };
     }
