@@ -1,148 +1,88 @@
 import * as cdk from "aws-cdk-lib";
-import {Construct} from "constructs";
-import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as apig from "aws-cdk-lib/aws-apigateway";
 import * as lambdanode from "aws-cdk-lib/aws-lambda-nodejs";
+import { Construct } from "constructs";
 import * as path from "path";
-import * as iam from "aws-cdk-lib/aws-iam";
+
+type LambdaDefinition = {
+    id: string;
+    entryFile: string;
+};
 
 export class Assignment1Stack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
 
-        const appCommonFnProps = {
-            architecture: lambda.Architecture.ARM_64,
+        const commonFnProps = this.createCommonNodejsFunctionProps();
+        const lambdas = this.createLambdas(commonFnProps);
+        const api = this.createApiGateway(lambdas);
+
+        new cdk.CfnOutput(this, "ApiEndpoint", {
+            value: api.url,
+            description: "API Gateway Endpoint",
+        });
+    }
+
+    private createCommonNodejsFunctionProps() {
+        return {
             timeout: cdk.Duration.seconds(10),
             memorySize: 128,
-            runtime: lambda.Runtime.NODEJS_22_X,
+            runtime: cdk.aws_lambda.Runtime.NODEJS_22_X,
             handler: "handler",
             environment: {
                 REGION: cdk.Aws.REGION,
             },
         };
+    }
 
-        // Functions
-        const getReviewsByMovieFn = new lambdanode.NodejsFunction(
-            this,
-            "GetReviewsByMovieFn",
-            {
-                ...appCommonFnProps,
-                entry: path.join(__dirname, "..", "lambdas", "getReviewsByMovie.ts"),
-            }
-        );
+    private getLambdaDefinitions(): LambdaDefinition[] {
+        return [
+            { id: "GetReviewsByMovieFn", entryFile: "getReviewsByMovie.ts" },
+            { id: "GetReviewsByDateAndMovieFn", entryFile: "getReviewByMovieAndPublished.ts" },
+            { id: "AddReviewFn", entryFile: "addMovieReview.ts" },
+            { id: "UpdateReviewFn", entryFile: "updateMovieReview.ts" },
+        ];
+    }
 
-        const getReviewByMovieAndPublishedFn = new lambdanode.NodejsFunction(
-            this,
-            "GetReviewByMovieAndPublishedFn",
-            {
-                ...appCommonFnProps,
-                entry: path.join(__dirname, "..", "lambdas", "getReviewByMovieAndPublished.ts"),
-            }
-        );
+    private createLambdas(commonProps: Omit<lambdanode.NodejsFunctionProps, "entry">): { [key: string]: lambdanode.NodejsFunction } {
+        const lambdas: { [key: string]: lambdanode.NodejsFunction } = {};
 
-        const addMovieReviewFn = new lambdanode.NodejsFunction(
-            this,
-            "AddMovieReviewFn",
-            {
-                ...appCommonFnProps,
-                entry: path.join(__dirname, "..", "lambdas", "addMovieReview.ts"),
-            }
-        );
+        for (const definition of this.getLambdaDefinitions()) {
+            lambdas[definition.id] = new lambdanode.NodejsFunction(this, definition.id, {
+                ...commonProps,
+                entry: path.join(__dirname, "..", "lambdas", definition.entryFile),
+            });
+        }
 
-        const updateMovieReviewFn = new lambdanode.NodejsFunction(
-            this,
-            "UpdateMovieReviewFn",
-            {
-                ...appCommonFnProps,
-                entry: path.join(__dirname, "..", "lambdas", "updateMovieReview.ts"),
-            }
-        );
+        return lambdas;
+    }
 
-        const getReviewsByMovieFnURL = getReviewsByMovieFn.addFunctionUrl({
-            authType: lambda.FunctionUrlAuthType.NONE,
-            cors: {
-                allowedOrigins: ["*"],
+    private createApiGateway(lambdas: { [key: string]: lambdanode.NodejsFunction }): apig.RestApi {
+        const api = new apig.RestApi(this, "AppApi", {
+            description: "Movie Review App RestApi",
+            endpointTypes: [apig.EndpointType.REGIONAL],
+            defaultCorsPreflightOptions: {
+                allowOrigins: apig.Cors.ALL_ORIGINS,
             },
+            deployOptions: { stageName: "dev" },
         });
 
-        const getReviewByMovieAndPublishedFnURL = getReviewByMovieAndPublishedFn.addFunctionUrl({
-            authType: lambda.FunctionUrlAuthType.NONE,
-            cors: {
-                allowedOrigins: ["*"],
-            },
-        });
+        // /movies/{movieId}/reviews
+        const moviesResource = api.root.addResource("movies");
+        const movieIdResource = moviesResource.addResource("{movieId}");
+        const movieReviewsResource = movieIdResource.addResource("reviews");
 
-        const addMovieReviewFnURL = addMovieReviewFn.addFunctionUrl({
-            authType: lambda.FunctionUrlAuthType.NONE,
-            cors: {
-                allowedOrigins: ["*"],
-            },
-        });
+        movieReviewsResource.addMethod("GET", new apig.LambdaIntegration(lambdas["GetReviewsByMovieFn"], { proxy: true }));
+        movieReviewsResource.addMethod("PUT", new apig.LambdaIntegration(lambdas["UpdateReviewFn"], { proxy: true }));
 
-        const updateMovieReviewFnURL = updateMovieReviewFn.addFunctionUrl({
-            authType: lambda.FunctionUrlAuthType.NONE,
-            cors: {
-                allowedOrigins: ["*"],
-            },
-        });
+        // /movies/reviews
+        const moviesReviewsResource = moviesResource.addResource("reviews");
+        moviesReviewsResource.addMethod("POST", new apig.LambdaIntegration(lambdas["AddReviewFn"], { proxy: true }));
 
-        getReviewsByMovieFn.addPermission("GetReviewsByMovieFunctionUrlPublicAccess", {
-            principal: new iam.AnyPrincipal(),
-            action: "lambda:InvokeFunctionUrl",
-            functionUrlAuthType: lambda.FunctionUrlAuthType.NONE,
-        });
+        // /reviews
+        const reviewsResource = api.root.addResource("reviews");
+        reviewsResource.addMethod("GET", new apig.LambdaIntegration(lambdas["GetReviewsByDateAndMovieFn"], { proxy: true }));
 
-        getReviewsByMovieFn.addPermission("GetReviewsByMovieFunctionPublicAccess", {
-            principal: new iam.AnyPrincipal(),
-            action: "lambda:InvokeFunction",
-        });
-
-        getReviewByMovieAndPublishedFn.addPermission("GetReviewByMovieAndPublishedFunctionUrlPublicAccess", {
-            principal: new iam.AnyPrincipal(),
-            action: "lambda:InvokeFunctionUrl",
-            functionUrlAuthType: lambda.FunctionUrlAuthType.NONE,
-        });
-
-        getReviewByMovieAndPublishedFn.addPermission("GetReviewByMovieAndPublishedFunctionPublicAccess", {
-            principal: new iam.AnyPrincipal(),
-            action: "lambda:InvokeFunction",
-        });
-
-        addMovieReviewFn.addPermission("AddMovieReviewFunctionUrlPublicAccess", {
-            principal: new iam.AnyPrincipal(),
-            action: "lambda:InvokeFunctionUrl",
-            functionUrlAuthType: lambda.FunctionUrlAuthType.NONE,
-        });
-
-        addMovieReviewFn.addPermission("AddMovieReviewFunctionPublicAccess", {
-            principal: new iam.AnyPrincipal(),
-            action: "lambda:InvokeFunction",
-        });
-
-        updateMovieReviewFn.addPermission("UpdateMovieReviewFunctionUrlPublicAccess", {
-            principal: new iam.AnyPrincipal(),
-            action: "lambda:InvokeFunctionUrl",
-            functionUrlAuthType: lambda.FunctionUrlAuthType.NONE,
-        });
-
-        updateMovieReviewFn.addPermission("UpdateMovieReviewFunctionPublicAccess", {
-            principal: new iam.AnyPrincipal(),
-            action: "lambda:InvokeFunction",
-        });
-
-        new cdk.CfnOutput(this, "GetReviewsByMovieFnURL", {
-            value: getReviewsByMovieFnURL.url,
-        });
-
-        new cdk.CfnOutput(this, "GetReviewByMovieAndPublishedFnURL", {
-            value: getReviewByMovieAndPublishedFnURL.url,
-        });
-
-        new cdk.CfnOutput(this, "AddMovieReviewFnURL", {
-            value: addMovieReviewFnURL.url,
-        });
-
-        new cdk.CfnOutput(this, "UpdateMovieReviewFnURL", {
-            value: updateMovieReviewFnURL.url,
-        });
+        return api;
     }
 }

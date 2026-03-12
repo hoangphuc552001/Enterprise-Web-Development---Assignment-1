@@ -1,17 +1,14 @@
-import { Handler } from "aws-lambda";
+import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 
-export const handler: Handler = async (event: any) => {
+export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     try {
         console.log("Event: ", JSON.stringify(event));
 
-        const movieId = event?.queryStringParameters?.movie ?? "1234";
+        const movieId = event?.pathParameters?.movieId ?? "1234";
         const published = event?.queryStringParameters?.published ?? "1995-05";
 
         return {
             statusCode: 200,
-            headers: {
-                "content-type": "application/json",
-            },
             body: JSON.stringify({
                 movieId,
                 published,
@@ -26,9 +23,6 @@ export const handler: Handler = async (event: any) => {
         console.log(JSON.stringify(error));
         return {
             statusCode: 500,
-            headers: {
-                "content-type": "application/json",
-            },
             body: JSON.stringify({ error }),
         };
     }
