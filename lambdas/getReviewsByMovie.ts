@@ -5,6 +5,7 @@ import {
     QueryCommand,
     GetCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { validateGetReviewsQuery } from "../shared/validation";
 
 const ddbClient = new DynamoDBClient({ region: process.env.REGION });
 const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
@@ -21,6 +22,20 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         }
 
         const reviewer = event.queryStringParameters?.reviewer;
+
+        if (reviewer) {
+            const queryParams = { reviewer };
+            if (!validateGetReviewsQuery(queryParams)) {
+                return {
+                    statusCode: 400,
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({
+                        message: "Invalid query parameters",
+                        errors: validateGetReviewsQuery.errors,
+                    }),
+                };
+            }
+        }
 
         if (reviewer) {
             const command = new GetCommand({
@@ -49,7 +64,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
                 body: JSON.stringify({
                     data: {
                         movieId: result.Item.movieId,
-                        reviewerId: result.Item.reviewerId,
+                        reviewerId: result.Item.email,
                         date: result.Item.date,
                         text: result.Item.text,
                     },
@@ -74,7 +89,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
             body: JSON.stringify({
                 data: (result.Items || []).map((item) => ({
                     movieId: item.movieId,
-                    reviewerId: item.reviewerId,
+                    reviewerId: item.email,
                     date: item.date,
                     text: item.text,
                 })),

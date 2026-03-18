@@ -30,7 +30,18 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
             };
         }
 
-        const { movieId, date, text, email } = body;
+        // Extract reviewer email from custom authorizer context
+        const email = (event.requestContext as any).authorizer?.userId;
+
+        if (!email) {
+            return {
+                statusCode: 401,
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ message: "Unauthorized: unable to identify reviewer" }),
+            };
+        }
+
+        const { movieId, date, text } = body;
 
         const command = new PutCommand({
             TableName: process.env.TABLE_NAME,
