@@ -27,11 +27,11 @@ export type Jwk = {
 export const parseCookies = (
     event: APIGatewayRequestAuthorizerEvent | APIGatewayProxyEvent
 ) => {
-    if (!event.headers || !event.headers.Cookie) {
+    if (!event.headers || (!event.headers.Cookie && !event.headers.cookie)) {
         return undefined;
     }
 
-    const cookiesStr = event.headers.Cookie;
+    const cookiesStr = event.headers.Cookie || event.headers.cookie!;
     const cookiesArr = cookiesStr.split(";");
 
     const cookieMap: CookieMap = {};
@@ -56,25 +56,9 @@ export const verifyToken = async (
     try {
         const url = `https://cognito-idp.${region}.amazonaws.com/${userPoolId}/.well-known/jwks.json`;
         const { data }: { data: Jwk } = await axios.get(url);
+        const pem = jwkToPem(data.keys[0]);
 
-        // Decode the token header to get the kid
-        const decodedHeader = jwt.decode(token, { complete: true });
-        if (!decodedHeader) {
-            console.log("Failed to decode token");
-            return null;
-        }
-
-        // Match the kid from the token to the correct JWK key
-        const kid = (decodedHeader as any).header.kid;
-        const matchingKey = data.keys.find((k) => k.kid === kid);
-
-        if (!matchingKey) {
-            console.log("No matching JWK key found for kid:", kid);
-            return null;
-        }
-
-        const pem = jwkToPem(matchingKey);
-        return jwt.verify(token, pem, { algorithms: ["RS256"] }) as JwtToken;
+        return jwt.verify(token, pem, {algorithms: ["RS256"]}) as JwtToken;
     } catch (err) {
         console.log(err);
         return null;
