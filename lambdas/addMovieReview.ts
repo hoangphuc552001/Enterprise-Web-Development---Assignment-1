@@ -1,29 +1,74 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { validateAddReview } from "../shared/validation";
+
+const ddbClient = new DynamoDBClient({ region: process.env.REGION });
+const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
 
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     try {
-        console.log("Event: ", JSON.stringify(event));
+        const body = event.body ? JSON.parse(event.body) : undefined;
 
-        const requestBody = event?.body ? JSON.parse(event.body) : {};
+        if (!body) {
+            return {
+                statusCode: 400,
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ message: "Request body is required" }),
+            };
+        }
+
+        const isValid = validateAddReview(body);
+        if (!isValid) {
+            return {
+                statusCode: 400,
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                    message: "Validation failed",
+                    errors: validateAddReview.errors,
+                }),
+            };
+        }
+
+        const { movieId, date, text, email } = body;
+
+        const command = new PutCommand({
+            TableName: process.env.TABLE_NAME,
+            Item: {
+                PK: `m#${movieId}`,
+                SK: `r#${email}`,
+                movieId,
+                email,
+                date,
+                text,
+            },
+            ConditionExpression:
+                "attribute_not_exists(PK) AND attribute_not_exists(SK)",
+        });
+
+        await ddbDocClient.send(command);
 
         return {
             statusCode: 201,
+            headers: { "content-type": "application/json" },
             body: JSON.stringify({
-                message: "Fake movie review created.",
-                review: {
-                    movieId: requestBody.movieId ?? "1234",
-                    reviewer: requestBody.reviewer ?? "userA",
-                    published: requestBody.published ?? "2026-03",
-                    reviewText: requestBody.reviewText ?? "This is a fake review created by the POST endpoint.",
-                    rating: requestBody.rating ?? 5,
-                },
+                message: "Review added successfully",
             }),
         };
     } catch (error: any) {
-        console.log(JSON.stringify(error));
+        if (error.name === "ConditionalCheckFailedException") {
+            return {
+                statusCode: 409,
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                    message: "A review by this reviewer for this movie already exists",
+                }),
+            };
+        }
         return {
             statusCode: 500,
-            body: JSON.stringify({ error }),
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ message: error.message }),
         };
     }
 };
