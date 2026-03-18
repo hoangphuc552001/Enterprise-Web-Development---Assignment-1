@@ -49,7 +49,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
                 body: JSON.stringify({
                     data: {
                         movieId: result.Item.movieId,
-                        reviewerId: result.Item.reviewerId,
+                        reviewerId: result.Item.email,
                         date: result.Item.date,
                         text: result.Item.text,
                     },
@@ -74,7 +74,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
             body: JSON.stringify({
                 data: (result.Items || []).map((item) => ({
                     movieId: item.movieId,
-                    reviewerId: item.reviewerId,
+                    reviewerId: item.email,
                     date: item.date,
                     text: item.text,
                 })),
