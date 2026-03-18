@@ -12,8 +12,13 @@ type LambdaDefinition = {
     entryFile: string;
 };
 
+interface Assignment1StackProps extends cdk.StackProps {
+    userPoolId: string;
+    userPoolClientId: string;
+}
+
 export class Assignment1Stack extends cdk.Stack {
-    constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    constructor(scope: Construct, id: string, props: Assignment1StackProps) {
         super(scope, id, props);
 
         const table = this.createDynamoDBTable();
@@ -23,7 +28,7 @@ export class Assignment1Stack extends cdk.Stack {
 
         this.grantTablePermissions(table, lambdas, seedFn);
         this.createSeedDataResource(seedFn);
-        const api = this.createApiGateway(lambdas);
+        const api = this.createApiGateway(lambdas, props.userPoolId, props.userPoolClientId);
 
         new cdk.CfnOutput(this, "ApiEndpoint", {
             value: api.url,
@@ -73,7 +78,7 @@ export class Assignment1Stack extends cdk.Stack {
         tableName: string
     ): Omit<lambdanode.NodejsFunctionProps, "entry"> {
         return {
-            architecture:cdk.aws_lambda.Architecture.ARM_64,
+            architecture: cdk.aws_lambda.Architecture.ARM_64,
             timeout: cdk.Duration.seconds(10),
             memorySize: 128,
             runtime: cdk.aws_lambda.Runtime.NODEJS_22_X,
@@ -135,7 +140,9 @@ export class Assignment1Stack extends cdk.Stack {
     }
 
     private createApiGateway(
-        lambdas: { [key: string]: lambdanode.NodejsFunction }
+        lambdas: { [key: string]: lambdanode.NodejsFunction },
+        userPoolId: string,
+        userPoolClientId: string
     ): apig.RestApi {
         const api = new apig.RestApi(this, "AppApi", {
             description: "Movie Review App RestApi",
@@ -146,6 +153,30 @@ export class Assignment1Stack extends cdk.Stack {
             deployOptions: {stageName: "dev"},
         });
 
+        const authorizerFn = new lambdanode.NodejsFunction(this, "AuthorizerFn", {
+            architecture: cdk.aws_lambda.Architecture.ARM_64,
+            timeout: cdk.Duration.seconds(10),
+            memorySize: 128,
+            runtime: cdk.aws_lambda.Runtime.NODEJS_22_X,
+            handler: "handler",
+            entry: path.join(__dirname, "..", "lambdas", "auth", "authorizer.ts"),
+            environment: {
+                USER_POOL_ID: userPoolId,
+                CLIENT_ID: userPoolClientId,
+                REGION: cdk.Aws.REGION,
+            },
+        });
+
+        const requestAuthorizer = new apig.RequestAuthorizer(
+            this,
+            "RequestAuthorizer",
+            {
+                identitySources: [apig.IdentitySource.header("cookie")],
+                handler: authorizerFn,
+                resultsCacheTtl: cdk.Duration.minutes(0),
+            }
+        );
+
         const moviesResource = api.root.addResource("movies");
         const movieIdResource = moviesResource.addResource("{movieId}");
         const movieReviewsResource = movieIdResource.addResource("reviews");
@@ -154,15 +185,25 @@ export class Assignment1Stack extends cdk.Stack {
             "GET",
             new apig.LambdaIntegration(lambdas["GetReviewsByMovieFn"], {proxy: true})
         );
+
         movieReviewsResource.addMethod(
             "PUT",
-            new apig.LambdaIntegration(lambdas["UpdateReviewFn"], {proxy: true})
+            new apig.LambdaIntegration(lambdas["UpdateReviewFn"], {proxy: true}),
+            {
+                authorizer: requestAuthorizer,
+                authorizationType: apig.AuthorizationType.CUSTOM,
+            }
         );
 
         const moviesReviewsResource = moviesResource.addResource("reviews");
+
         moviesReviewsResource.addMethod(
             "POST",
-            new apig.LambdaIntegration(lambdas["AddReviewFn"], {proxy: true})
+            new apig.LambdaIntegration(lambdas["AddReviewFn"], {proxy: true}),
+            {
+                authorizer: requestAuthorizer,
+                authorizationType: apig.AuthorizationType.CUSTOM,
+            }
         );
 
         const reviewsResource = api.root.addResource("reviews");

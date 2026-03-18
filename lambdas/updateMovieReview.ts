@@ -39,7 +39,17 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
             };
         }
 
-        const reviewerId = body.email;
+        // Extract reviewer email from custom authorizer context
+        const reviewerId = (event.requestContext as any).authorizer?.userId;
+
+        if (!reviewerId) {
+            return {
+                statusCode: 401,
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ message: "Unauthorized: unable to identify reviewer" }),
+            };
+        }
+
         const { text } = body;
 
         const command = new UpdateCommand({
@@ -49,6 +59,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
                 SK: `r#${reviewerId}`,
             },
             UpdateExpression: "SET #text = :text",
+            ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
             ExpressionAttributeNames: {
                 "#text": "text",
             },
@@ -67,12 +78,12 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
             }),
         };
     } catch (error: any) {
-        if (error.name === "ValidationException") {
+        if (error.name === "ConditionalCheckFailedException") {
             return {
                 statusCode: 404,
                 headers: { "content-type": "application/json" },
                 body: JSON.stringify({
-                    message: "Review not found",
+                    message: "Review not found or you are not the author",
                 }),
             };
         }
