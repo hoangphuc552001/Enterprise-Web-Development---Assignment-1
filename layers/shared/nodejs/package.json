@@ -1,0 +1,8 @@
+{
+  "name": "shared-layer",
+  "version": "1.0.0",
+  "description": "Shared validation layer",
+  "dependencies": {
+    "ajv": "^8.18.0"
+  }
+}

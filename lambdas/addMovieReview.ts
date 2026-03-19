@@ -1,7 +1,7 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
-import { validateAddReview } from "../shared/validation";
+import { validateAddReview } from "shared/validation";
 
 const ddbClient = new DynamoDBClient({ region: process.env.REGION });
 const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);

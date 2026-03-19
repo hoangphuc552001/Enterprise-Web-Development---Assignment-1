@@ -1,7 +1,10 @@
 *.js
 !jest.config.js
+!layers/shared/nodejs/node_modules/shared/validation.js
 *.d.ts
 node_modules
+!layers/shared/nodejs/node_modules/
+!layers/shared/nodejs/node_modules/shared/
 
 # CDK asset staging directory
 .cdk.staging

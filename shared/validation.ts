@@ -4,7 +4,7 @@ import {
     UpdateReviewRequest,
     GetReviewsQueryParams,
     GetReviewsByMovieParamsQueryParams,
-} from "./types.d";
+} from "./types";
 
 const ajv = new Ajv({ allErrors: true });
 
