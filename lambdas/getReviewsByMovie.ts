@@ -5,7 +5,7 @@ import {
     QueryCommand,
     GetCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { validateGetReviewsQuery } from "../shared/validation";
+import { validateGetReviewsQuery } from "shared/validation";
 
 const ddbClient = new DynamoDBClient({ region: process.env.REGION });
 const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);

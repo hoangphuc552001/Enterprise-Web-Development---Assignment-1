@@ -1,5 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import * as apig from "aws-cdk-lib/aws-apigateway";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as lambdanode from "aws-cdk-lib/aws-lambda-nodejs";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as custom from "aws-cdk-lib/custom-resources";
@@ -21,10 +22,17 @@ export class Assignment1Stack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: Assignment1StackProps) {
         super(scope, id, props);
 
+        const sharedLayer = new lambda.LayerVersion(this, "SharedLayer", {
+            compatibleRuntimes: [lambda.Runtime.NODEJS_22_X],
+            code: lambda.Code.fromAsset(path.join(__dirname, "..", "layers", "shared")),
+            description: "Shared validation layer",
+        });
+
         const table = this.createDynamoDBTable();
-        const commonFnProps = this.createCommonNodejsFunctionProps(table.tableName);
+        const commonFnProps = this.createCommonNodejsFunctionProps(table.tableName, sharedLayer);
         const lambdas = this.createLambdas(commonFnProps);
         const seedFn = this.createSeedFunction(commonFnProps);
+
 
         this.grantTablePermissions(table, lambdas, seedFn);
         this.createSeedDataResource(seedFn);
@@ -75,7 +83,8 @@ export class Assignment1Stack extends cdk.Stack {
     }
 
     private createCommonNodejsFunctionProps(
-        tableName: string
+        tableName: string,
+        sharedLayer: lambda.LayerVersion
     ): Omit<lambdanode.NodejsFunctionProps, "entry"> {
         return {
             architecture: cdk.aws_lambda.Architecture.ARM_64,
@@ -83,9 +92,13 @@ export class Assignment1Stack extends cdk.Stack {
             memorySize: 128,
             runtime: cdk.aws_lambda.Runtime.NODEJS_22_X,
             handler: "handler",
+            layers: [sharedLayer],
             environment: {
                 REGION: cdk.Aws.REGION,
                 TABLE_NAME: tableName,
+            },
+            bundling: {
+                externalModules: ["shared", "@aws-sdk/*", "@smithy/*"],
             },
         };
     }
