@@ -166,6 +166,60 @@ export class Assignment1Stack extends cdk.Stack {
             deployOptions: {stageName: "dev"},
         });
 
+        const bodyValidator = api.addRequestValidator("BodyValidator", {
+            requestValidatorName: "body-validator",
+            validateRequestBody: true,
+            validateRequestParameters: false,
+        });
+
+        const queryParamsValidator = api.addRequestValidator("QueryParamsValidator", {
+            requestValidatorName: "query-params-validator",
+            validateRequestBody: false,
+            validateRequestParameters: true,
+        });
+
+        const addReviewModel = api.addModel("AddReviewModel", {
+            contentType: "application/json",
+            modelName: "AddReviewModel",
+            schema: {
+                type: apig.JsonSchemaType.OBJECT,
+                required: ["movieId", "date", "text"],
+                properties: {
+                    movieId: {
+                        type: apig.JsonSchemaType.INTEGER,
+                        minimum: 1,
+                    },
+                    date: {
+                        type: apig.JsonSchemaType.STRING,
+                        pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                    },
+                    text: {
+                        type: apig.JsonSchemaType.STRING,
+                        minLength: 1,
+                        maxLength: 5000,
+                    },
+                },
+                additionalProperties: false,
+            },
+        });
+
+        const updateReviewModel = api.addModel("UpdateReviewModel", {
+            contentType: "application/json",
+            modelName: "UpdateReviewModel",
+            schema: {
+                type: apig.JsonSchemaType.OBJECT,
+                required: ["text"],
+                properties: {
+                    text: {
+                        type: apig.JsonSchemaType.STRING,
+                        minLength: 1,
+                        maxLength: 5000,
+                    },
+                },
+                additionalProperties: false,
+            },
+        });
+
         const authorizerFn = new lambdanode.NodejsFunction(this, "AuthorizerFn", {
             architecture: cdk.aws_lambda.Architecture.ARM_64,
             timeout: cdk.Duration.seconds(10),
@@ -205,6 +259,10 @@ export class Assignment1Stack extends cdk.Stack {
             {
                 authorizer: requestAuthorizer,
                 authorizationType: apig.AuthorizationType.CUSTOM,
+                requestValidator: bodyValidator,
+                requestModels: {
+                    "application/json": updateReviewModel,
+                },
             }
         );
 
@@ -216,13 +274,24 @@ export class Assignment1Stack extends cdk.Stack {
             {
                 authorizer: requestAuthorizer,
                 authorizationType: apig.AuthorizationType.CUSTOM,
+                requestValidator: bodyValidator,
+                requestModels: {
+                    "application/json": addReviewModel,
+                },
             }
         );
 
         const reviewsResource = api.root.addResource("reviews");
         reviewsResource.addMethod(
             "GET",
-            new apig.LambdaIntegration(lambdas["GetReviewsByDateAndMovieFn"], {proxy: true})
+            new apig.LambdaIntegration(lambdas["GetReviewsByDateAndMovieFn"], {proxy: true}),
+            {
+                requestValidator: queryParamsValidator,
+                requestParameters: {
+                    "method.request.querystring.movie": true,
+                    "method.request.querystring.published": true,
+                },
+            }
         );
 
         return api;
