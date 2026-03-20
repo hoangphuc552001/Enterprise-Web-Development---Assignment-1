@@ -40,6 +40,7 @@ export class AppApi extends Construct {
             memorySize: 128,
             runtime: lambda.Runtime.NODEJS_22_X,
             handler: "handler",
+            tracing: lambda.Tracing.ACTIVE,
             layers: [props.sharedLayer],
             environment: {
                 REGION: cdk.Aws.REGION,
@@ -100,7 +101,7 @@ export class AppApi extends Construct {
             defaultCorsPreflightOptions: {
                 allowOrigins: apig.Cors.ALL_ORIGINS,
             },
-            deployOptions: {stageName: "dev"},
+            deployOptions: {stageName: "dev", tracingEnabled: true},
         });
 
         // Request validators
