@@ -43,13 +43,15 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
         const { movieId, date, text } = body;
 
+        const reviewerId = email;
+
         const command = new PutCommand({
             TableName: process.env.TABLE_NAME,
             Item: {
                 PK: `m#${movieId}`,
                 SK: `r#${email}`,
                 movieId,
-                email,
+                reviewerId,
                 date,
                 text,
             },
