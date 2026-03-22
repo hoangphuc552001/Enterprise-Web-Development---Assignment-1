@@ -6,7 +6,7 @@ __Student ID:__ 20115747
 
 
 ### Links.
-__Demo:__ A link to your YouTube video demonstration.
+__Demo:__ https://youtu.be/OyipBtxxrEs
 
 __GitHub:__ https://github.com/hoangphuc552001/Enterprise-Web-Development---Assignment-1
 
@@ -74,6 +74,9 @@ All application Lambdas are created with `tracing: lambda.Tracing.ACTIVE`, and t
 #### CDK Custom Resource for Database Seeding
 
 A **CDK Custom Resource** is implemented to seed the DynamoDB table with initial data upon stack deployment. This custom resource invokes a Lambda function that populates the `MoviesTable` with predefined movies and reviews.
+
+#### Add npx cdx synth to ci pipeline
+The CI pipeline is enhanced to include `npx cdk synth` to ensure that the CDK code synthesizes correctly before deployment.
 
 [api]: ./images/api1.png
 [db]: ./images/db.png

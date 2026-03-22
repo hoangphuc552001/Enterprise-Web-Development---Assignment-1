@@ -69,7 +69,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
                 movieId: review.movieId,
                 published: review.date,
                 review: {
-                    reviewerId: review.email,
+                    reviewerId: review.reviewerId,
                     text: review.text,
                 },
             }),
