@@ -14,7 +14,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (!isValid) {
             return {
                 statusCode: 400,
-                headers: { "content-type": "application/json" },
+                headers: { 
+                    "content-type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
                 body: JSON.stringify({
                     message: "Validation failed",
                     errors: validateGetReviewsByMovieParams.errors,
@@ -28,7 +31,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (!movieId || !published) {
             return {
                 statusCode: 400,
-                headers: { "content-type": "application/json" },
+                headers: { 
+                    "content-type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
                 body: JSON.stringify({
                     message: "Both movie and published query parameters are required",
                 }),
@@ -53,7 +59,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (!result.Items || result.Items.length === 0) {
             return {
                 statusCode: 404,
-                headers: { "content-type": "application/json" },
+                headers: { 
+                    "content-type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
                 body: JSON.stringify({
                     message: "No review found for this movie with the specified date",
                 }),
@@ -64,7 +73,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
         return {
             statusCode: 200,
-            headers: { "content-type": "application/json" },
+            headers: { 
+                "content-type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            },
             body: JSON.stringify({
                 movieId: review.movieId,
                 published: review.date,
@@ -77,7 +89,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     } catch (error: any) {
         return {
             statusCode: 500,
-            headers: { "content-type": "application/json" },
+            headers: { 
+                "content-type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            },
             body: JSON.stringify({ message: error.message }),
         };
     }

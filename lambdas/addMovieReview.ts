@@ -13,7 +13,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (!body) {
             return {
                 statusCode: 400,
-                headers: { "content-type": "application/json" },
+                headers: { 
+                    "content-type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
                 body: JSON.stringify({ message: "Request body is required" }),
             };
         }
@@ -22,7 +25,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (!isValid) {
             return {
                 statusCode: 400,
-                headers: { "content-type": "application/json" },
+                headers: { 
+                    "content-type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
                 body: JSON.stringify({
                     message: "Validation failed",
                     errors: validateAddReview.errors,
@@ -36,7 +42,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (!email) {
             return {
                 statusCode: 401,
-                headers: { "content-type": "application/json" },
+                headers: { 
+                    "content-type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
                 body: JSON.stringify({ message: "Unauthorized: unable to identify reviewer" }),
             };
         }
@@ -63,7 +72,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
         return {
             statusCode: 201,
-            headers: { "content-type": "application/json" },
+            headers: { 
+                "content-type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            },
             body: JSON.stringify({
                 message: "Review added successfully",
             }),
@@ -72,7 +84,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (error.name === "ConditionalCheckFailedException") {
             return {
                 statusCode: 409,
-                headers: { "content-type": "application/json" },
+                headers: { 
+                    "content-type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
                 body: JSON.stringify({
                     message: "A review by this reviewer for this movie already exists",
                 }),
@@ -80,7 +95,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         }
         return {
             statusCode: 500,
-            headers: { "content-type": "application/json" },
+            headers: { 
+                "content-type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            },
             body: JSON.stringify({ message: error.message }),
         };
     }

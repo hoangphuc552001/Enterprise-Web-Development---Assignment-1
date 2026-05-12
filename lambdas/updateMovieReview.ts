@@ -14,7 +14,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (!movieId) {
             return {
                 statusCode: 400,
-                headers: { "content-type": "application/json" },
+                headers: { 
+                    "content-type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
                 body: JSON.stringify({ message: "Movie ID is required" }),
             };
         }
@@ -22,7 +25,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (!body) {
             return {
                 statusCode: 400,
-                headers: { "content-type": "application/json" },
+                headers: { 
+                    "content-type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
                 body: JSON.stringify({ message: "Request body is required" }),
             };
         }
@@ -31,7 +37,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (!isValid) {
             return {
                 statusCode: 400,
-                headers: { "content-type": "application/json" },
+                headers: { 
+                    "content-type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
                 body: JSON.stringify({
                     message: "Validation failed",
                     errors: validateUpdateReview.errors,
@@ -45,7 +54,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (!reviewerId) {
             return {
                 statusCode: 401,
-                headers: { "content-type": "application/json" },
+                headers: { 
+                    "content-type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
                 body: JSON.stringify({ message: "Unauthorized: unable to identify reviewer" }),
             };
         }
@@ -72,7 +84,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
         return {
             statusCode: 200,
-            headers: { "content-type": "application/json" },
+            headers: { 
+                "content-type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            },
             body: JSON.stringify({
                 message: "Review updated successfully",
             }),
@@ -81,7 +96,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (error.name === "ConditionalCheckFailedException") {
             return {
                 statusCode: 404,
-                headers: { "content-type": "application/json" },
+                headers: { 
+                    "content-type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
                 body: JSON.stringify({
                     message: "Review not found or you are not the author",
                 }),
@@ -89,7 +107,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         }
         return {
             statusCode: 500,
-            headers: { "content-type": "application/json" },
+            headers: { 
+                "content-type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            },
             body: JSON.stringify({ message: error.message }),
         };
     }
