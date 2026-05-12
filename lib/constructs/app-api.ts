@@ -179,7 +179,7 @@ export class AppApi extends Construct {
             this,
             "RequestAuthorizer",
             {
-                identitySources: [apig.IdentitySource.header("cookie")],
+                identitySources: [apig.IdentitySource.header("Authorization")],
                 handler: authorizerFn,
                 resultsCacheTtl: cdk.Duration.minutes(0),
             }

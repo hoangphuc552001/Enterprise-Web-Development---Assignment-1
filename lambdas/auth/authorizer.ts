@@ -4,9 +4,12 @@ import { APIGatewayRequestAuthorizerHandler, StatementEffect } from "aws-lambda"
 export const handler: APIGatewayRequestAuthorizerHandler = async (event) => {
     console.log("[EVENT]", event);
 
-    const cookies: CookieMap = parseCookies(event);
+    const token = event.headers?.Authorization?.replace("Bearer ", "") || event.headers?.authorization?.replace("Bearer ", "");
 
-    if (!cookies) {
+    const cookies: CookieMap = parseCookies(event);
+    const finalToken = token || (cookies ? cookies.token : undefined);
+
+    if (!finalToken) {
         return {
             principalId: "",
             policyDocument: createPolicy(event, "Deny" as StatementEffect),
@@ -14,7 +17,7 @@ export const handler: APIGatewayRequestAuthorizerHandler = async (event) => {
     }
 
     const verifiedJwt = await verifyToken(
-        cookies.token,
+        finalToken,
         process.env.USER_POOL_ID,
         process.env.REGION!
     );
