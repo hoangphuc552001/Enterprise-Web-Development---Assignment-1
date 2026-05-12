@@ -15,6 +15,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         if (!body || !body.username || !body.code) {
             return {
                 statusCode: 400,
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                },
                 body: JSON.stringify({
                     message: "username and code are required",
                 }),
@@ -31,6 +34,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
         return {
             statusCode: 200,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+            },
             body: JSON.stringify({
                 message: "User confirmed successfully. You can now sign in.",
             }),
@@ -38,6 +44,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     } catch (error: any) {
         return {
             statusCode: 500,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+            },
             body: JSON.stringify({ message: error.message }),
         };
     }
