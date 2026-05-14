@@ -1,11 +1,11 @@
-import { APIGatewayProxyHandlerV2 } from "aws-lambda";
+import { APIGatewayProxyHandler } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 
 const ddbClient = new DynamoDBClient({ region: process.env.REGION });
 const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
 
-export const handler: APIGatewayProxyHandlerV2 = async (event) => {
+export const handler: APIGatewayProxyHandler = async (event) => {
     try {
         const email = (event.requestContext as any).authorizer?.userId;
         if (!email) {
@@ -19,7 +19,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         const pk = `u#${email}`;
         const sk = "fantasy";
 
-        if (event.requestContext.http.method === "GET") {
+        if (event.httpMethod === "GET") {
             const command = new GetCommand({
                 TableName: process.env.TABLE_NAME,
                 Key: { PK: pk, SK: sk },
@@ -34,7 +34,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
             };
         }
 
-        if (event.requestContext.http.method === "PUT") {
+        if (event.httpMethod === "PUT") {
             const body = event.body ? JSON.parse(event.body) : undefined;
             if (!body || !Array.isArray(body.movies)) {
                 return {
