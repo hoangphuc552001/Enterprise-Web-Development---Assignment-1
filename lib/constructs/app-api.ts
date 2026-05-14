@@ -58,6 +58,9 @@ export class AppApi extends Construct {
             {id: "GetReviewsByDateAndMovieFn", entryFile: "getReviewByMovieAndPublished.ts"},
             {id: "AddReviewFn", entryFile: "addMovieReview.ts"},
             {id: "UpdateReviewFn", entryFile: "updateMovieReview.ts"},
+            {id: "FavouritesFn", entryFile: "favourites.ts"},
+            {id: "PlaylistsFn", entryFile: "playlists.ts"},
+            {id: "FantasyMoviesFn", entryFile: "fantasyMovies.ts"},
         ];
     }
 
@@ -88,6 +91,9 @@ export class AppApi extends Construct {
         table.grantReadData(lambdas["GetReviewsByDateAndMovieFn"]);
         table.grantReadWriteData(lambdas["AddReviewFn"]);
         table.grantReadWriteData(lambdas["UpdateReviewFn"]);
+        table.grantReadWriteData(lambdas["FavouritesFn"]);
+        table.grantReadWriteData(lambdas["PlaylistsFn"]);
+        table.grantReadWriteData(lambdas["FantasyMoviesFn"]);
     }
 
     private createApiGateway(
@@ -235,6 +241,66 @@ export class AppApi extends Construct {
                     "method.request.querystring.movie": true,
                     "method.request.querystring.published": true,
                 },
+            }
+        );
+
+        // Routes: /user
+        const userResource = api.root.addResource("user");
+
+        // /user/favourites
+        const favouritesResource = userResource.addResource("favourites");
+        favouritesResource.addMethod(
+            "GET",
+            new apig.LambdaIntegration(lambdas["FavouritesFn"], {proxy: true}),
+            {
+                authorizer: requestAuthorizer,
+                authorizationType: apig.AuthorizationType.CUSTOM,
+            }
+        );
+        favouritesResource.addMethod(
+            "PUT",
+            new apig.LambdaIntegration(lambdas["FavouritesFn"], {proxy: true}),
+            {
+                authorizer: requestAuthorizer,
+                authorizationType: apig.AuthorizationType.CUSTOM,
+            }
+        );
+
+        // /user/playlists
+        const playlistsResource = userResource.addResource("playlists");
+        playlistsResource.addMethod(
+            "GET",
+            new apig.LambdaIntegration(lambdas["PlaylistsFn"], {proxy: true}),
+            {
+                authorizer: requestAuthorizer,
+                authorizationType: apig.AuthorizationType.CUSTOM,
+            }
+        );
+        playlistsResource.addMethod(
+            "PUT",
+            new apig.LambdaIntegration(lambdas["PlaylistsFn"], {proxy: true}),
+            {
+                authorizer: requestAuthorizer,
+                authorizationType: apig.AuthorizationType.CUSTOM,
+            }
+        );
+
+        // /user/fantasy-movies
+        const fantasyMoviesResource = userResource.addResource("fantasy-movies");
+        fantasyMoviesResource.addMethod(
+            "GET",
+            new apig.LambdaIntegration(lambdas["FantasyMoviesFn"], {proxy: true}),
+            {
+                authorizer: requestAuthorizer,
+                authorizationType: apig.AuthorizationType.CUSTOM,
+            }
+        );
+        fantasyMoviesResource.addMethod(
+            "PUT",
+            new apig.LambdaIntegration(lambdas["FantasyMoviesFn"], {proxy: true}),
+            {
+                authorizer: requestAuthorizer,
+                authorizationType: apig.AuthorizationType.CUSTOM,
             }
         );
 
