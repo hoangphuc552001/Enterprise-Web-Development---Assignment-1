@@ -3,6 +3,8 @@ import * as apig from "aws-cdk-lib/aws-apigateway";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as lambdanode from "aws-cdk-lib/aws-lambda-nodejs";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as iam from "aws-cdk-lib/aws-iam";
 import {Construct} from "constructs";
 import * as path from "path";
 
@@ -27,7 +29,9 @@ export class AppApi extends Construct {
         const commonFnProps = this.createCommonFnProps(props);
         const lambdas = this.createLambdas(commonFnProps);
         this.grantTablePermissions(props.table, lambdas);
-        const api = this.createApiGateway(lambdas, props.userPoolId, props.userPoolClientId);
+        const postersBucket = this.createPostersBucket();
+        const presignedUrlFn = this.createPresignedUrlFn(commonFnProps, postersBucket);
+        const api = this.createApiGateway(lambdas, presignedUrlFn, props.userPoolId, props.userPoolClientId);
         this.apiUrl = api.url;
     }
 
@@ -96,8 +100,66 @@ export class AppApi extends Construct {
         table.grantReadWriteData(lambdas["FantasyMoviesFn"]);
     }
 
+    private createPostersBucket(): s3.Bucket {
+        const bucket = new s3.Bucket(this, "PostersBucket", {
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            autoDeleteObjects: true,
+            blockPublicAccess: new s3.BlockPublicAccess({
+                blockPublicAcls: false,
+                blockPublicPolicy: false,
+                ignorePublicAcls: false,
+                restrictPublicBuckets: false,
+            }),
+            publicReadAccess: true,
+            cors: [
+                {
+                    allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.GET],
+                    allowedOrigins: ["*"],
+                    allowedHeaders: ["*"],
+                    maxAge: 3000,
+                },
+            ],
+        });
+
+        bucket.addToResourcePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                principals: [new iam.AnyPrincipal()],
+                actions: ["s3:GetObject"],
+                resources: [bucket.arnForObjects("*")],
+            })
+        );
+
+        return bucket;
+    }
+
+    private createPresignedUrlFn(
+        commonProps: Omit<lambdanode.NodejsFunctionProps, "entry">,
+        bucket: s3.Bucket
+    ): lambdanode.NodejsFunction {
+        const fn = new lambdanode.NodejsFunction(this, "GeneratePresignedUrlFn", {
+            ...commonProps,
+            entry: path.join(__dirname, "..", "..", "lambdas", "generatePresignedUrl.ts"),
+            environment: {
+                ...commonProps.environment,
+                BUCKET_NAME: bucket.bucketName,
+            },
+            // Bundle ALL @aws-sdk/* and @smithy/* for this Lambda — the runtime's
+            // built-in versions are too old for @aws-sdk/client-s3 v3.1000+
+            // which requires @smithy/core/protocols (a newer sub-path export).
+            bundling: {
+                externalModules: ["shared"],
+            },
+        });
+
+        bucket.grantPut(fn);
+
+        return fn;
+    }
+
     private createApiGateway(
         lambdas: { [key: string]: lambdanode.NodejsFunction },
+        presignedUrlFn: lambdanode.NodejsFunction,
         userPoolId: string,
         userPoolClientId: string
     ): apig.RestApi {
@@ -298,6 +360,17 @@ export class AppApi extends Construct {
         fantasyMoviesResource.addMethod(
             "PUT",
             new apig.LambdaIntegration(lambdas["FantasyMoviesFn"], {proxy: true}),
+            {
+                authorizer: requestAuthorizer,
+                authorizationType: apig.AuthorizationType.CUSTOM,
+            }
+        );
+
+        const uploadResource = api.root.addResource("upload");
+        const presignedUrlResource = uploadResource.addResource("presigned-url");
+        presignedUrlResource.addMethod(
+            "POST",
+            new apig.LambdaIntegration(presignedUrlFn, {proxy: true}),
             {
                 authorizer: requestAuthorizer,
                 authorizationType: apig.AuthorizationType.CUSTOM,
