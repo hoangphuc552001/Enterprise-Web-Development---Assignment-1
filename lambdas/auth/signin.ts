@@ -17,7 +17,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
                 statusCode: 400,
                 headers: {
                     "Access-Control-Allow-Origin": "*",
-                },
+                } as Record<string, string>,
                 body: JSON.stringify({
                     message: "username and password are required",
                 }),
@@ -40,7 +40,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
                 statusCode: 400,
                 headers: {
                     "Access-Control-Allow-Origin": "*",
-                },
+                } as Record<string, string>,
                 body: JSON.stringify({
                     message: "User signin failed",
                 }),
@@ -55,7 +55,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
                 "Access-Control-Allow-Headers": "*",
                 "Access-Control-Allow-Origin": "*",
                 "Set-Cookie": `token=${token}; SameSite=None; Secure; HttpOnly; Path=/; Max-Age=3600;`,
-            },
+            } as Record<string, string>,
             body: JSON.stringify({
                 message: "Auth successfull",
                 token: token,
@@ -66,7 +66,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
             statusCode: 500,
             headers: {
                 "Access-Control-Allow-Origin": "*",
-            },
+            } as Record<string, string>,
             body: JSON.stringify({ message: error.message }),
         };
     }
